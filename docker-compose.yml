@@ -1,0 +1,47 @@
+version: '3.3'
+
+services:
+  postgres:
+    image: ankane/pgvector:latest
+    container_name: postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: //Asgh@100r
+      POSTGRES_DB: psych_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    ports:
+      - "6379:6379"
+    restart: always
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: app
+    ports:
+      - "80:80"
+    depends_on:
+      - postgres
+    environment:
+      DATABASE_URL: postgresql+asyncpg://postgres:%2F%2FAsgh%40100r@postgres:5432/psych_db
+      REDIS_URL: redis://host.docker.internal:6379/0
+      SECRET_KEY: eJ4Khu2kPZbnhmUEOPZFaMnOL46mqxojps1Jgni-5Jk
+      ALGORITHM: HS256
+      ACCESS_TOKEN_EXPIRE_MINUTES: 1440
+    volumes:
+      - ./psycho:/app
+    restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+volumes:
+  postgres_data:
+    driver: local
