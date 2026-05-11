@@ -26,9 +26,14 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import ENUM, JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
-class Base(DeclarativeBase):
-    pass
+from app.database import Base
 
+from sqlalchemy import Enum as SQLEnum
+role: Mapped[UserRole] = mapped_column(
+    SQLEnum(UserRole, name="user_role", native_enum=True),
+    default=UserRole.CLIENT,
+    nullable=False
+)
 
 # ==================== ENUMS ====================
 

@@ -1,0 +1,24 @@
+routers/
+    auth.py
+    chat.py
+    memory.py
+    profile.py
+
+services/
+    llm_service.py
+    memory_service.py
+    embedding_service.py
+    retrieval_service.py
+    summarizer_service.py
+
+models/
+    user.py
+    message.py
+    memory.py
+
+repositories/
+    message_repository.py
+    memory_repository.py
+
+workers/
+    summarizer_worker.py
