@@ -1,11 +1,7 @@
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
-from app.models import (
-    ChatSession,
-    ChatMessage,
-    MemoryVector
-)
-
+from app.models import ChatSession, ChatMessage, MemoryVector
 from app.services.embedding_service import EmbeddingService
 from app.services.retrieval_service import RetrievalService
 from app.services.context_builder import ContextBuilder
@@ -16,25 +12,29 @@ class ChatService:
 
     @staticmethod
     async def process_message(
-        db,
+        db: AsyncSession,
         current_user,
-        session_id,
-        user_message_content
+        session_id: str,
+        user_message_content: str
     ):
-
-        # verify session
+        # ==============================
+        # 1. Validate session
+        # ==============================
         result = await db.execute(
             select(ChatSession).where(
-                ChatSession.id == session_id
+                ChatSession.id == session_id,
+                ChatSession.client_id == current_user.client_profile.id
             )
         )
 
         session = result.scalar_one_or_none()
 
         if not session:
-            raise Exception("Session not found")
+            raise Exception("Session not found or unauthorized")
 
-        # save user message
+        # ==============================
+        # 2. Save user message
+        # ==============================
         user_message = ChatMessage(
             session_id=session.id,
             sender="client",
@@ -44,34 +44,49 @@ class ChatService:
         db.add(user_message)
         await db.flush()
 
-        # embedding
+        # ==============================
+        # 3. Create embedding
+        # ==============================
         embedding = await EmbeddingService.create_embedding(
             user_message_content
         )
 
-        # save memory vector
+        # ==============================
+        # 4. Store memory vector
+        # ==============================
         memory = MemoryVector(
             client_id=session.client_id,
             session_id=session.id,
             content=user_message_content,
-            embedding=embedding
+            embedding=embedding,
+            metadata_col={
+                "type": "conversation_message"
+            }
         )
 
         db.add(memory)
 
-        # retrieve memories
+        # ==============================
+        # 5. Retrieve relevant memories
+        # ==============================
         memories = await RetrievalService.retrieve_memories(
-            db,
-            embedding
+            db=db,
+            embedding=embedding,
+            client_id=session.client_id,
+            limit=5
         )
 
-        # build context
+        # ==============================
+        # 6. Build context
+        # ==============================
         context = ContextBuilder.build_context(
-            user_message_content,
-            memories
+            user_message=user_message_content,
+            retrieved_memories=memories
         )
 
-        # generate AI response
+        # ==============================
+        # 7. Generate AI response
+        # ==============================
         ai_response = await LLMService.generate_response([
             {
                 "role": "user",
@@ -79,7 +94,9 @@ class ChatService:
             }
         ])
 
-        # save ai message
+        # ==============================
+        # 8. Save AI message
+        # ==============================
         ai_message = ChatMessage(
             session_id=session.id,
             sender="ai",
@@ -88,8 +105,14 @@ class ChatService:
 
         db.add(ai_message)
 
+        # ==============================
+        # 9. Commit all
+        # ==============================
         await db.commit()
 
+        # ==============================
+        # 10. Return result
+        # ==============================
         return {
             "user_message": user_message,
             "ai_message": ai_message

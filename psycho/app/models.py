@@ -29,11 +29,7 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 from app.database import Base
 
 from sqlalchemy import Enum as SQLEnum
-role: Mapped[UserRole] = mapped_column(
-    SQLEnum(UserRole, name="user_role", native_enum=True),
-    default=UserRole.CLIENT,
-    nullable=False
-)
+
 
 # ==================== ENUMS ====================
 
