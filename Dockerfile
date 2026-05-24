@@ -2,13 +2,16 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
-RUN sed -i 's|http://deb.debian.org/debian|http://mirror.arvancloud.ir/debian|g' /etc/apt/sources.list.d/debian.sources && \
+RUN sed -i 's|http://deb.debian.org/debian|http://repo.abrha.net/debian|g' /etc/apt/sources.list.d/debian.sources && \
     sed -i 's|http://deb.debian.org/debian-security|http://mirror.arvancloud.ir/debian-security|g' /etc/apt/sources.list.d/debian.sources
 
-RUN apt-get update -o Acquire::Check-Valid-Until=false && \
-    apt-get install -y build-essential && \
-    rm -rf /var/lib/apt/lists/*
+#RUN apt-get update -o Acquire::Check-Valid-Until=false && \
+#    apt-get install -y build-essential && \
+#    rm -rf /var/lib/apt/lists/*
 
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
 
 COPY psycho/requirements.txt .
 RUN pip install --no-cache-dir --trusted-host mirror-pypi.runflare.com -i https://mirror-pypi.runflare.com/simple/ -r requirements.txt
