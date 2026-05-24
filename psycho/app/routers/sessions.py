@@ -4,12 +4,11 @@ from sqlalchemy import select
 
 from app.database import get_db
 from app.models import User, ChatSession
-from app.schemas import (
+from app.schemas.session import (
     ChatSessionCreate,
     ChatSessionResponse,
     ChatMessageCreate
 )
-
 from app.dependencies import get_current_user
 from app.services.chat_service import ChatService
 

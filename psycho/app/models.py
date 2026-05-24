@@ -291,7 +291,6 @@ class SessionSummary(TimestampMixin, Base):
 
     session: Mapped["ChatSession"] = relationship(back_populates="summary")
 
-
 class MemoryVector(Base):
     __tablename__ = "memory_vectors"
 
@@ -304,5 +303,9 @@ class MemoryVector(Base):
         index=True
     )
 
+    # تکمیل و بستن کد:
     session_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("chat_sessions.id", ondelete
+        ForeignKey("chat_sessions.id", ondelete="CASCADE"), # فرض بر CASCADE
+        index=True
+    )
+

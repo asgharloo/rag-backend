@@ -1,7 +1,6 @@
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from pathlib import Path
 
-# پیدا کردن root پروژه
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 class Settings(BaseSettings):
@@ -10,8 +9,9 @@ class Settings(BaseSettings):
     SECRET_KEY: str
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440
+    DEBUG: bool = False  # ✅ اضافه شد
 
-    class Config:
-        env_file = str(BASE_DIR / ".env")
+    model_config = SettingsConfigDict(env_file=str(BASE_DIR / ".env"), case_sensitive=False)
 
 settings = Settings()
+
