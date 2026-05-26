@@ -3,7 +3,7 @@ from app.config import settings
 
 
 client = AsyncOpenAI(
-    api_key=settings.API_KEY
+    api_key=settings.OPENAI_API_KEY
 )
 
 
