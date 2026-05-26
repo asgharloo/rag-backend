@@ -1,7 +1,7 @@
 # psycho/app/models.py
 
 from datetime import datetime
-from typing import Optional, Any
+from typing import Optional, List, Dict, Any
 import uuid
 import enum
 
@@ -15,8 +15,6 @@ from sqlalchemy import (
     Text,
     TIMESTAMP,
     text,
-    UUID,
-    Enum as SQLEnum,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -26,25 +24,14 @@ from pgvector.sqlalchemy import Vector
 from app.database import Base
 
 
-# ==================== ENUMS ====================
+# =========================
+# ENUMS
+# =========================
 
 class UserRole(str, enum.Enum):
     CLIENT = "client"
     SPECIALIST = "specialist"
     ADMIN = "admin"
-
-
-class Gender(str, enum.Enum):
-    MALE = "male"
-    FEMALE = "female"
-    OTHER = "other"
-
-
-class MaritalStatus(str, enum.Enum):
-    SINGLE = "single"
-    MARRIED = "married"
-    DIVORCED = "divorced"
-    WIDOWED = "widowed"
 
 
 class SessionStatus(str, enum.Enum):
@@ -58,44 +45,22 @@ class MessageSender(str, enum.Enum):
     AI = "ai"
 
 
-class AssessmentStatus(str, enum.Enum):
-    PENDING = "pending"
-    COMPLETED = "completed"
+class MemoryType(str, enum.Enum):
+    CHAT = "chat"
+    PERSONAL = "personal"
+    CLINICAL = "clinical"
+    INSIGHT = "insight"
 
 
-class SpecialistStatus(str, enum.Enum):
-    AVAILABLE = "available"
-    BUSY = "busy"
-    OFFLINE = "offline"
+class ImportanceLevel(str, enum.Enum):
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
 
 
-class AppointmentStatus(str, enum.Enum):
-    SCHEDULED = "scheduled"
-    COMPLETED = "completed"
-    CANCELLED = "cancelled"
-
-
-class TestType(str, enum.Enum):
-    DEPRESSION = "depression"
-    ANXIETY = "anxiety"
-    PERSONALITY = "personality"
-    OTHER = "other"
-
-
-class PrescriptionStatus(str, enum.Enum):
-    ACTIVE = "active"
-    COMPLETED = "completed"
-    CANCELLED = "cancelled"
-
-
-class RecommendationType(str, enum.Enum):
-    LIFESTYLE = "lifestyle"
-    THERAPY = "therapy"
-    MEDICATION = "medication"
-    OTHER = "other"
-
-
-# ==================== MIXIN ====================
+# =========================
+# MIXIN
+# =========================
 
 class TimestampMixin:
     created_at: Mapped[datetime] = mapped_column(
@@ -110,36 +75,35 @@ class TimestampMixin:
     )
 
 
-# ==================== MODELS ====================
+# =========================
+# USER LAYER
+# =========================
 
 class User(TimestampMixin, Base):
     __tablename__ = "users"
 
     id: Mapped[uuid.UUID] = mapped_column(
-        UUID, primary_key=True, server_default=text("gen_random_uuid()")
+        primary_key=True,
+        server_default=text("gen_random_uuid()"),
     )
 
     role: Mapped[UserRole] = mapped_column(
-        SQLEnum(
-            UserRole,
-            name="user_role",
-            native_enum=True,
-            values_callable=lambda x: [e.value for e in x],
-        ),
-        default=UserRole.CLIENT,
+        String,
+        default=UserRole.CLIENT.value,
         nullable=False,
     )
 
-    phone_number: Mapped[str] = mapped_column(String(15), unique=True, index=True)
-
-    is_active: Mapped[bool] = mapped_column(Boolean, server_default=text("true"))
+    phone_number: Mapped[str] = mapped_column(String(20), unique=True, index=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
 
     client_profile: Mapped[Optional["ClientProfile"]] = relationship(
-        back_populates="user", uselist=False
+        back_populates="user",
+        uselist=False,
     )
 
     specialist_profile: Mapped[Optional["SpecialistProfile"]] = relationship(
-        back_populates="user", uselist=False
+        back_populates="user",
+        uselist=False,
     )
 
 
@@ -147,165 +111,148 @@ class ClientProfile(TimestampMixin, Base):
     __tablename__ = "client_profiles"
 
     id: Mapped[uuid.UUID] = mapped_column(
-        UUID, primary_key=True, server_default=text("gen_random_uuid()")
+        primary_key=True,
+        server_default=text("gen_random_uuid()"),
     )
 
     user_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("users.id", ondelete="CASCADE"), unique=True
+        ForeignKey("users.id", ondelete="CASCADE"),
+        unique=True,
     )
 
     first_name: Mapped[Optional[str]] = mapped_column(String(100))
     last_name: Mapped[Optional[str]] = mapped_column(String(100))
 
-    date_of_birth: Mapped[Optional[datetime]] = mapped_column(TIMESTAMP(timezone=True))
-
-    gender: Mapped[Optional[Gender]] = mapped_column(
-        SQLEnum(Gender, name="gender_type", values_callable=lambda x: [e.value for e in x])
-    )
-
-    marital_status: Mapped[Optional[MaritalStatus]] = mapped_column(
-        SQLEnum(
-            MaritalStatus,
-            name="marital_status_type",
-            values_callable=lambda x: [e.value for e in x],
-        )
-    )
-
-    occupation: Mapped[Optional[str]] = mapped_column(String(100))
-    emergency_contact: Mapped[Optional[str]] = mapped_column(String(15))
-
     user: Mapped["User"] = relationship(back_populates="client_profile")
 
-    clinical_profile: Mapped[Optional["ClientClinicalProfile"]] = relationship(
-        back_populates="client", uselist=False
-    )
-
-    chat_sessions: Mapped[list["ChatSession"]] = relationship(back_populates="client")
-    assessments: Mapped[list["ClientAssessment"]] = relationship(back_populates="client")
-    appointments: Mapped[list["Appointment"]] = relationship(back_populates="client")
-    test_results: Mapped[list["TestResult"]] = relationship(back_populates="client")
-    prescriptions: Mapped[list["Prescription"]] = relationship(back_populates="client")
-    recommendations: Mapped[list["Recommendation"]] = relationship(back_populates="client")
+    chat_sessions: Mapped[List["ChatSession"]] = relationship(back_populates="client")
+    memories: Mapped[List["Memory"]] = relationship(back_populates="client")
 
 
-class ClientClinicalProfile(TimestampMixin, Base):
-    __tablename__ = "client_clinical_profiles"
+class SpecialistProfile(TimestampMixin, Base):
+    __tablename__ = "specialist_profiles"
 
     id: Mapped[uuid.UUID] = mapped_column(
-        UUID, primary_key=True, server_default=text("gen_random_uuid()")
+        primary_key=True,
+        server_default=text("gen_random_uuid()"),
     )
 
-    client_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("client_profiles.id", ondelete="CASCADE"), unique=True
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"),
+        unique=True,
     )
 
-    medical_history: Mapped[Optional[dict]] = mapped_column(JSONB)
-    current_medications: Mapped[Optional[dict]] = mapped_column(JSONB)
-    allergies: Mapped[Optional[dict]] = mapped_column(JSONB)
-    previous_diagnoses: Mapped[Optional[dict]] = mapped_column(JSONB)
-    family_history: Mapped[Optional[dict]] = mapped_column(JSONB)
+    specialization: Mapped[str] = mapped_column(String(120))
 
-    client: Mapped["ClientProfile"] = relationship(back_populates="clinical_profile")
+    user: Mapped["User"] = relationship(back_populates="specialist_profile")
 
+
+# =========================
+# CHAT LAYER
+# =========================
 
 class ChatSession(TimestampMixin, Base):
     __tablename__ = "chat_sessions"
 
     id: Mapped[uuid.UUID] = mapped_column(
-        UUID, primary_key=True, server_default=text("gen_random_uuid()")
-    )
-
-    client_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("client_profiles.id", ondelete="CASCADE"), index=True
-    )
-
-    status: Mapped[SessionStatus] = mapped_column(
-        SQLEnum(SessionStatus, name="session_status",
-        values_callable=lambda x: [e.value for e in x]),
-        default=SessionStatus.ACTIVE,
-    )
-
-    started_at: Mapped[datetime] = mapped_column(
-        TIMESTAMP(timezone=True),
-        server_default=text("CURRENT_TIMESTAMP"),
-    )
-
-    ended_at: Mapped[Optional[datetime]] = mapped_column(TIMESTAMP(timezone=True))
-
-    client: Mapped["ClientProfile"] = relationship(back_populates="chat_sessions")
-
-    messages: Mapped[list["ChatMessage"]] = relationship(back_populates="session")
-
-    summary: Mapped[Optional["SessionSummary"]] = relationship(
-        back_populates="session",
-        uselist=False
-    )
-
-
-class ChatMessage(Base):
-    __tablename__ = "chat_messages"
-
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID, primary_key=True, server_default=text("gen_random_uuid()")
-    )
-
-    session_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("chat_sessions.id", ondelete="CASCADE"),
-        index=True
-    )
-
-    sender: Mapped[MessageSender] = mapped_column(
-        SQLEnum(MessageSender, name="message_sender",
-        values_callable=lambda x: [e.value for e in x]),
-        nullable=False
-    )
-
-    content: Mapped[str] = mapped_column(Text, nullable=False)
-
-    metadata_col: Mapped[Optional[dict]] = mapped_column("metadata", JSONB)
-
-    created_at: Mapped[datetime] = mapped_column(
-        TIMESTAMP(timezone=True),
-        server_default=text("CURRENT_TIMESTAMP")
-    )
-
-    session: Mapped["ChatSession"] = relationship(back_populates="messages")
-
-
-class SessionSummary(TimestampMixin, Base):
-    __tablename__ = "session_summaries"
-
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID, primary_key=True, server_default=text("gen_random_uuid()")
-    )
-
-    session_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("chat_sessions.id", ondelete="CASCADE"),
-        unique=True
-    )
-
-    summary: Mapped[str] = mapped_column(Text, nullable=False)
-
-    key_topics: Mapped[Optional[dict]] = mapped_column(JSONB)
-    sentiment_analysis: Mapped[Optional[dict]] = mapped_column(JSONB)
-
-    session: Mapped["ChatSession"] = relationship(back_populates="summary")
-
-class MemoryVector(Base):
-    __tablename__ = "memory_vectors"
-
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID, primary_key=True, server_default=text("gen_random_uuid()")
+        primary_key=True,
+        server_default=text("gen_random_uuid()"),
     )
 
     client_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("client_profiles.id", ondelete="CASCADE"),
-        index=True
+        index=True,
     )
 
-    # تکمیل و بستن کد:
+    status: Mapped[SessionStatus] = mapped_column(
+        String,
+        default=SessionStatus.ACTIVE.value,
+    )
+
+    summary: Mapped[Optional[str]] = mapped_column(Text)
+
+    client: Mapped["ClientProfile"] = relationship(back_populates="chat_sessions")
+
+    messages: Mapped[List["ChatMessage"]] = relationship(back_populates="session")
+
+
+class ChatMessage(TimestampMixin, Base):
+    __tablename__ = "chat_messages"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        primary_key=True,
+        server_default=text("gen_random_uuid()"),
+    )
+
     session_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("chat_sessions.id", ondelete="CASCADE"), # فرض بر CASCADE
-        index=True
+        ForeignKey("chat_sessions.id", ondelete="CASCADE"),
+        index=True,
     )
 
+    sender: Mapped[MessageSender] = mapped_column(String, nullable=False)
+
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+
+    metadata_col: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSONB)
+
+    session: Mapped["ChatSession"] = relationship(back_populates="messages")
+
+
+# =========================
+# 🧠 AI MEMORY LAYER (CORE)
+# =========================
+
+class Memory(TimestampMixin, Base):
+    """
+    This is the HEART of your AI system.
+    """
+
+    __tablename__ = "memories"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        primary_key=True,
+        server_default=text("gen_random_uuid()"),
+    )
+
+    client_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("client_profiles.id", ondelete="CASCADE"),
+        index=True,
+    )
+
+    session_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("chat_sessions.id", ondelete="CASCADE"),
+        index=True,
+    )
+
+    # raw memory text
+    content: Mapped[str] = mapped_column(Text)
+
+    # embedding vector (pgvector)
+    embedding: Mapped[list[float]] = mapped_column(Vector(1536))
+
+    memory_type: Mapped[MemoryType] = mapped_column(String, default=MemoryType.CHAT.value)
+
+    importance: Mapped[ImportanceLevel] = mapped_column(
+        String,
+        default=ImportanceLevel.MEDIUM.value,
+    )
+
+    # decay / relevance scoring
+    importance_score: Mapped[float] = mapped_column(Float, default=0.5)
+
+    metadata_col: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSONB)
+
+    client: Mapped["ClientProfile"] = relationship(back_populates="memories")
+
+
+# =========================
+# VECTOR INDEX (CRITICAL)
+# =========================
+
+Index(
+    "memory_embedding_idx",
+    Memory.embedding,
+    postgresql_using="hnsw",
+    postgresql_with={"m": 16, "ef_construction": 64},
+    postgresql_ops={"embedding": "vector_cosine_ops"},
+)
