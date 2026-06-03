@@ -1,6 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from app.models.models import ChatSession, Message
+from app.models.models import ChatSession, ChatMessage
 
 async def create_chat_session(db: AsyncSession, user_id: int, title: str = "جلسه جدید"):
     db_session = ChatSession(user_id=user_id, title=title)
@@ -17,12 +17,12 @@ async def get_user_sessions(db: AsyncSession, user_id: int):
 
 async def get_session_messages(db: AsyncSession, session_id: int):
     result = await db.execute(
-        select(Message).where(Message.session_id == session_id).order_by(Message.created_at.asc())
+        select(ChatMessage).where(ChatMessage.session_id == session_id).order_by(ChatMessage.created_at.asc())
     )
     return result.scalars().all()
 
 async def add_message(db: AsyncSession, session_id: int, role: str, content: str):
-    message = Message(session_id=session_id, role=role, content=content)
+    message = ChatMessage(session_id=session_id, role=role, content=content)
     db.add(message)
     await db.commit()
     await db.refresh(message)

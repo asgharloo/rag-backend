@@ -1,13 +1,22 @@
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from logging.config import fileConfig
 from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config, create_async_engine
 from alembic import context
 from app.config import settings
-from app.models import Base
+from app.database import Base
+from app.models.models import Base
 import asyncio
+from app.config import settings  
+
+from logging.config import fileConfig
 
 config = context.config
+
+config.set_main_option("sqlalchemy.url", str(settings.DATABASE_URL).replace("%", "%%"))
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
@@ -17,6 +26,14 @@ target_metadata = Base.metadata
 SYNC_DATABASE_URL = settings.DATABASE_URL.replace("+asyncpg", "+psycopg2")
 
 def run_migrations_offline() -> None:
+    url = settings.DATABASE_URL 
+    context.configure(
+        url=url,
+        target_metadata=target_metadata,
+        literal_binds=True,
+        dialect_opts={"paramstyle": "named"},
+    )
+    # ... ادامه کد
     context.configure(
         url=SYNC_DATABASE_URL,
         target_metadata=target_metadata,
@@ -32,9 +49,11 @@ def do_run_migrations(connection: Connection) -> None:
         context.run_migrations()
 
 async def run_async_migrations() -> None:
-    connectable = create_async_engine(
-        settings.DATABASE_URL,
+    connectable = async_engine_from_config(
+        config.get_section(config.config_ini_section, {}),
+        prefix="sqlalchemy.",
         poolclass=pool.NullPool,
+        url=settings.DATABASE_URL  # <--- اضافه کردن URL از تنظیمات
     )
 
     async with connectable.connect() as connection:

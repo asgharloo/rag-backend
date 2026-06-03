@@ -1,8 +1,8 @@
-"""make client profile fields nullable
+"""init models
 
-Revision ID: 58162c05473d
-Revises: 316f7f6c58bc
-Create Date: 2026-04-21 19:00:01.585261
+Revision ID: ac57762f72b0
+Revises: 6540c9bb35f2
+Create Date: 2026-05-31 17:23:46.099986
 
 """
 from typing import Sequence, Union
@@ -12,8 +12,8 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '58162c05473d'
-down_revision: Union[str, Sequence[str], None] = '316f7f6c58bc'
+revision: str = 'ac57762f72b0'
+down_revision: Union[str, Sequence[str], None] = '6540c9bb35f2'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

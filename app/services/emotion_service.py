@@ -19,7 +19,7 @@ Return JSON ONLY with:
 - stress_level (0-1)
 - confidence (0-1)
 
-Message:
+ChatMessage:
 {text}
 """
 

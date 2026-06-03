@@ -6,7 +6,7 @@ from datetime import datetime
 from typing import List, Optional
 
 # ==========================================
-# Message Schemas
+# ChatMessage Schemas
 # ==========================================
 class MessageBase(BaseModel):
     role: str  # e.g., "user" or "assistant"
