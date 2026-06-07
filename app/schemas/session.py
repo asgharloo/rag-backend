@@ -1,6 +1,5 @@
 
 ### `app/schemas/session.py`
-```python
 from pydantic import BaseModel, ConfigDict
 from datetime import datetime
 from typing import List, Optional
@@ -43,4 +42,3 @@ class SessionResponse(SessionBase):
 # Optional: If you want to return a session along with all its messages
 class SessionWithMessagesResponse(SessionResponse):
     messages: List[MessageResponse] = []
-```

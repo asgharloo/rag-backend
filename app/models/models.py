@@ -155,6 +155,11 @@ class SpecialistProfile(TimestampMixin, Base):
 
 class ChatSession(TimestampMixin, Base):
     __tablename__ = "chat_sessions"
+   
+    title: Mapped[Optional[str]] = mapped_column(
+        String, 
+        default="جلسه جدید"
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
