@@ -37,11 +37,9 @@ async def verify_otp_endpoint(request: VerifyOTPRequest, db: AsyncSession = Depe
             detail="Invalid or expired OTP code"
         )
 
-    # گرفتن یا ساختن کاربر
-    user = await crud_user.get_user_by_phone(db, phone_number=request.phone_number)
-    if not user:
-        user = await crud_user.create_user(db, phone_number=request.phone_number)
-
+    
+     # 2. Get existing user or create a new one (along with ClientProfile)
+    user = await crud_user.get_or_create_user(db, phone_number=request.phone_number)
     # تولید توکن واقعی با jwt.py شما
     access_token = create_access_token(data={"sub": str(user.id)})
 
