@@ -1,6 +1,8 @@
+### app.router.sessions.py
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
+from uuid import UUID
 
 from app.dependencies import get_db, get_current_user
 from app.models.models import User
@@ -16,7 +18,12 @@ async def create_new_session(
     current_user: User = Depends(get_current_user)
 ):
     """Create a new chat session for the current authenticated user."""
-    return await crud_session.create_chat_session(db, user_id=current_user.id, title=title)
+    return await crud_session.create_chat_session(
+    db,
+    client_id=current_user.client_profile.id,
+    title=title
+)
+  
 
 @router.get("/", response_model=List[SessionResponse])
 async def list_user_sessions(
@@ -24,11 +31,11 @@ async def list_user_sessions(
     current_user: User = Depends(get_current_user)
 ):
     """Get a list of all chat sessions belonging to the current user."""
-    return await crud_session.get_user_sessions(db, user_id=current_user.id)
+    return await crud_session.get_user_sessions(db, client_id=current_user.client_profile.id)
 
 @router.get("/{session_id}/messages", response_model=List[MessageResponse])
 async def get_messages(
-    session_id: int,
+    session_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):

@@ -9,6 +9,7 @@ from app.dependencies import get_current_user
 
 router = APIRouter(prefix="/chat", tags=["Chat"])
 
+
 @router.post("/sessions", response_model=ChatSessionResponse)
 def create_session(
     session_in: ChatSessionCreate,
