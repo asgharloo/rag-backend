@@ -1,14 +1,24 @@
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import Session
 from sqlalchemy.future import select
 from app.models.models import ChatSession, ChatMessage
+from uuid import UUID
 
-async def create_chat_session(db: AsyncSession, user_id: str, title: str = "جلسه جدید"):
-    db_session = ChatSession(client_id=user_id, title=title)
-    db.add(db_session)
-    await db.commit()
-    await db.refresh(db_session)
-    return db_session
-
+def create_chat_session(db: Session, client_id: UUID, title: str = None):
+    # Create the new session instance
+    new_session = ChatSession(
+        client_id=client_id,
+        title=title
+    )
+    db.add(new_session)
+    
+    # Commit to save to the database
+    db.commit()
+    
+    # Refresh to load the generated 'id' and 'created_at' from the database
+    db.refresh(new_session)
+    
+    return new_session
 
 async def get_user_sessions(db: AsyncSession, user_id: str):
     result = await db.execute(

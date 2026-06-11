@@ -8,6 +8,11 @@ from app.database import AsyncSessionLocal
 from app.utils.jwt import verify_token
 from app.crud.user import get_user_by_id
 from app.models.models import User
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
+from sqlalchemy.orm import joinedload
+from jose import JWTError, jwt
+from app.config import settings
 
 security = HTTPBearer()
 
@@ -26,35 +31,45 @@ async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
     db: AsyncSession = Depends(get_db)
 ) -> User:
-    """
-    Dependency to get the current authenticated user from the JWT token.
-    """
+
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
 
-    # استخراج توکن از هدر
     token = credentials.credentials
 
-    # Verify and decode the token
-    payload = verify_token(token)
-    if payload is None:
+    try:
+        payload = jwt.decode(
+            token,
+            settings.SECRET_KEY,
+            algorithms=[settings.ALGORITHM]
+        )
+
+        user_id = payload.get("sub")
+
+        if user_id is None:
+            raise credentials_exception
+
+    except JWTError:
         raise credentials_exception
 
-    # Extract user ID from the token payload (assuming it's stored in 'sub')
+    stmt = (
+        select(User)
+        .options(joinedload(User.client_profile))
+        .where(User.id == user_id)   
+    )
 
-    user_id: str = payload.get("sub")  
-    
-    if user_id is None:
-        raise credentials_exception
+    result = await db.execute(stmt)
+    user = result.scalars().first()
 
-    # Fetch user from database
-    user = await get_user_by_id(db, user_id=user_id)
-    
     if user is None:
         raise credentials_exception
 
     return user
+
+
+    return user
+
 
