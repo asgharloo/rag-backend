@@ -26,27 +26,6 @@ async def create_chat_session(
     return db_session
 
 
-async def create_chat_session1(
-    db: AsyncSession,
-    client_id: UUID,
-    title: str | None = None
-):
-    session = ChatSession(
-        client_id=client_id,
-        title=title
-    )
-  
-    print("ID:", chat_session.id)
-    print("CLIENT:", chat_session.client_id)
-    print("CREATED:", chat_session.created_at)
-
-    db.add(session)
-    await db.commit()
-    await db.refresh(session)
-
-    return session
-
-
 async def get_user_sessions(db: AsyncSession, client_id: UUID):
     result = await db.execute(
         select(ChatSession)
@@ -67,7 +46,7 @@ async def get_session_messages(db: AsyncSession, session_id: UUID):
 async def add_message(
     db: AsyncSession,
     session_id: UUID,
-    sender_type: str,
+    sender: str,
     content: str
 ):
     message = ChatMessage(
@@ -81,5 +60,16 @@ async def add_message(
     await db.refresh(message)
 
     return message
+
+async def get_session_by_id(
+    db: AsyncSession,
+    session_id: UUID
+):
+    result = await db.execute(
+        select(ChatSession)
+        .where(ChatSession.id == session_id)
+    )
+
+    return result.scalars().first()
 
 

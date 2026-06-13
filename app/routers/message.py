@@ -1,6 +1,9 @@
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
+from uuid import UUID
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.dependencies import get_db, get_current_user
 from app.crud import session as session_crud
@@ -16,48 +19,84 @@ class MessageCreate(BaseModel):
 
 @router.post("/{session_id}/messages")
 async def send_message(
-    session_id: int,
+    session_id: UUID,
     message_in: MessageCreate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    # 1. Verify session exists and belongs to the current user
-    chat_session = session_crud.get_session(db, session_id=session_id)
-    if not chat_session or chat_session.user_id != current_user.id:
-        raise HTTPException(status_code=404, detail="Session not found")
+    """
+    Send a message to a session and generate AI response.
+    """
 
-    # 2. Save user message to the database
-    user_message = session_crud.create_message(
-        db, 
-        session_id=session_id, 
-        role="user", 
+    # 1. Verify session exists
+    chat_session = await session_crud.get_session_by_id(
+        db,
+        session_id
+    )
+
+    if not chat_session:
+        raise HTTPException(
+            status_code=404,
+            detail="Session not found"
+        )
+
+    # 2. Verify session belongs to current user
+    if chat_session.client_id != current_user.client_profile.id:
+        raise HTTPException(
+            status_code=403,
+            detail="Access denied"
+        )
+
+    # 3. Save user message
+    user_message = await session_crud.add_message(
+        db=db,
+        session_id=session_id,
+        sender_type="client",
         content=message_in.content
     )
 
-    # 3. Retrieve session message history for LLM context
-    session_messages = session_crud.get_session_messages(db, session_id=session_id)
-    
-    # Format messages for OpenAI API
-    chat_history = [{"role": msg.role, "content": msg.content} for msg in session_messages]
-
-    # 4. Generate AI response
-    system_prompt = "You are an empathetic and professional psychologist helping the user."
-    ai_response_content = await generate_ai_response(chat_history, system_prompt=system_prompt)
-
-    # 5. Generate embedding for the AI response (optional, for vector search purposes)
-    ai_embedding = await generate_embedding(ai_response_content)
-
-    # 6. Save AI response to the database
-    ai_message = session_crud.create_message(
-        db, 
-        session_id=session_id, 
-        role="assistant", 
-        content=ai_response_content,
-        # embedding=ai_embedding  # Uncomment if create_message supports storing embeddings
+    # 4. Retrieve session history
+    session_messages = await session_crud.get_session_messages(
+        db,
+        session_id=session_id
     )
 
-    return {
-        "user_message": {"id": user_message.id, "content": user_message.content},
-        "ai_message": {"id": ai_message.id, "content": ai_message.content}
-    }
+    # 5. Format history for LLM
+    chat_history = [
+        {
+            "role": msg.sender,
+            "content": msg.content
+        }
+        for msg in session_messages
+    ]
 
+    # 6. Generate AI response
+    system_prompt = (
+        "You are an empathetic and professional psychologist "
+        "helping the user."
+    )
+
+    ai_response_content = await generate_ai_response(
+        chat_history,
+        system_prompt=system_prompt
+    )
+
+    # 7. Save AI response
+    ai_message = await session_crud.add_message(
+        db=db,
+        session_id=session_id,
+        sender_type="ai",
+        content=ai_response_content
+    )
+
+    # 8. Return both messages
+    return {
+        "user_message": {
+            "id": str(user_message.id),
+            "content": user_message.content
+        },
+        "ai_message": {
+            "id": str(ai_message.id),
+            "content": ai_message.content
+        }
+    }

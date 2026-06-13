@@ -11,21 +11,6 @@ from app.schemas.session import SessionResponse, MessageResponse
 
 router = APIRouter(prefix="/sessions", tags=["Sessions"])
 
-'''
-@router.post("/", response_model=SessionResponse)
-async def create_new_session(
-    title: str = "New Counseling Session",
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    """Create a new chat session for the current authenticated user."""
-    return await crud_session.create_chat_session(
-    db,
-    client_id=current_user.client_profile.id,
-    title=title
-)
-'''
-
 @router.post("/", response_model=SessionResponse)
 async def create_new_session(
     title: str = "New Counseling Session",
@@ -57,6 +42,26 @@ async def get_messages(
     current_user: User = Depends(get_current_user)
 ):
     """Retrieve message history for a specific chat session."""
-    # TODO: Verify if the session_id actually belongs to the current_user
-    return await crud_session.get_session_messages(db, session_id=session_id)
 
+    session = await crud_session.get_session_by_id(
+        db,
+        session_id
+    )
+
+    if session is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Session not found"
+        )
+
+    if session.client_id != current_user.client_profile.id:
+        raise HTTPException(
+            status_code=403,
+            detail="Access denied"
+        )
+
+    return await crud_session.get_session_messages(
+        db,
+     session_id
+    )
+     
