@@ -9,7 +9,7 @@ from typing import List, Optional
 # ChatMessage Schemas
 # ==========================================
 class MessageBase(BaseModel):
-    role: str  # e.g., "user" or "assistant"
+    sender: str  # e.g., "user" or "assistant"
     content: str
 
 class MessageCreate(MessageBase):
