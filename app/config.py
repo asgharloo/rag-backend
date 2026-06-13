@@ -2,7 +2,7 @@ import os
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pathlib import Path
 
-# دیباگ: چک کردن فایل قبل از لود شدن
+  
 env_path = ".env"
 if os.path.exists(env_path):
     with open(env_path, "r") as f:

@@ -3,14 +3,15 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
 from uuid import UUID
-
 from app.dependencies import get_db, get_current_user
 from app.models.models import User
 from app.crud import session as crud_session
-from app.schemas.session import SessionResponse, MessageResponse 
+from app.schemas.chat import ChatSessionCreate
+from app.schemas.session import SessionResponse, MessageResponse
 
 router = APIRouter(prefix="/sessions", tags=["Sessions"])
 
+'''
 @router.post("/", response_model=SessionResponse)
 async def create_new_session(
     title: str = "New Counseling Session",
@@ -23,6 +24,22 @@ async def create_new_session(
     client_id=current_user.client_profile.id,
     title=title
 )
+'''
+
+@router.post("/", response_model=SessionResponse)
+async def create_new_session(
+    title: str = "New Counseling Session",
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+
+    session_in = ChatSessionCreate(title=title)
+
+    return await crud_session.create_chat_session(
+        db=db,
+        client_id=current_user.client_profile.id,
+        session_in=session_in
+    )
   
 
 @router.get("/", response_model=List[SessionResponse])

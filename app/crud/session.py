@@ -2,8 +2,31 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.models.models import ChatSession, ChatMessage
 from uuid import UUID
+import uuid
+from app.schemas.chat import ChatSessionCreate
+
 
 async def create_chat_session(
+    db: AsyncSession,
+    client_id: uuid.UUID,
+    session_in: ChatSessionCreate
+):
+    db_session = ChatSession(
+        client_id=client_id,
+        title=session_in.title
+    )
+
+    print(type(db))
+    
+    db.add(db_session)
+
+    await db.commit()
+    await db.refresh(db_session)
+
+    return db_session
+
+
+async def create_chat_session1(
     db: AsyncSession,
     client_id: UUID,
     title: str | None = None
@@ -12,6 +35,10 @@ async def create_chat_session(
         client_id=client_id,
         title=title
     )
+  
+    print("ID:", chat_session.id)
+    print("CLIENT:", chat_session.client_id)
+    print("CREATED:", chat_session.created_at)
 
     db.add(session)
     await db.commit()
