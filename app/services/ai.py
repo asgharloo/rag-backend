@@ -1,6 +1,9 @@
 import os
 from openai import OpenAI
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+from app.config import settings
+client = OpenAI(api_key=settings.OPENAI_API_KEY)
+
+print("OPENAI:", settings.OPENAI_API_KEY)
 
 async def generate_ai_response(messages: list[dict]) -> str:
     """
