@@ -7,6 +7,7 @@ from app.schemas.chat import ChatSessionCreate, ChatSessionResponse, ChatMessage
 #from app.schemas.chat import ChatMessageCreate as create_chat_message
 from app.crud import chat as crud_chat
 from app.dependencies import get_current_user
+from app.models.models import MessageSender
 
 router = APIRouter(prefix="/chat", tags=["Chat"])
 
@@ -40,11 +41,27 @@ async def  send_message(
     """
     # 1. Save the user's message to the database
     user_message = await crud_chat.create_chat_message(
+    db=db,
+    session_id=session_id,
+    content=message_in.content,
+    sender=MessageSender.CLIENT.value
+    )
+    '''
+    user_message = await crud_chat.create_chat_message(
+    db=db,
+    session_id=session_id,
+    content=message_in.content,
+    sender="client"
+    )
+
+    user_message = await crud_chat.create_chat_message(
         db=db,
         session_id=session_id,
         content=message_in.content,
         sender_type="user"
     )
+    
+    
     
     # 2. AI Logic placeholder
     # Send message_in.content to LLM and get the response here
@@ -59,6 +76,14 @@ async def  send_message(
         sender_type="ai"
     )
     
+    '''
+    ai_message = await crud_chat.create_chat_message(
+    db=db,
+    session_id=session_id,
+    content=ai_response_text,
+    sender=MessageSender.AI.value
+    )
+
     # Return the user's message (or change the response model to return both/AI message)
     return user_message
 

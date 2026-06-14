@@ -2,6 +2,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.models.models import User, ClientProfile
 from uuid import UUID
+from app.models.models import UserRole
 
 
 async def get_user_by_phone(db: AsyncSession, phone_number: str):
@@ -29,7 +30,7 @@ async def get_or_create_user(db: AsyncSession, phone_number: str):
 
     user = User(
         phone_number=phone_number,
-        role="CLIENT",
+        role=UserRole.CLIENT.value,
         is_active=True
     )
 

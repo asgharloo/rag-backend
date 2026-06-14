@@ -46,20 +46,20 @@ async def get_session_messages(db: AsyncSession, session_id: UUID):
 async def add_message(
     db: AsyncSession,
     session_id: UUID,
-    sender: str,
+    sender_type: str,
     content: str
 ):
     message = ChatMessage(
         session_id=session_id,
-        sender_type=sender_type,
+        sender=sender_type,
         content=content
     )
 
     db.add(message)
+
     await db.commit()
     await db.refresh(message)
 
-    return message
 
 async def get_session_by_id(
     db: AsyncSession,

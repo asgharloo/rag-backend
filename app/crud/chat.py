@@ -24,20 +24,20 @@ async def create_chat_session(
     return db_session
 
 async def create_chat_message(
-    db: Session, 
-    session_id: uuid.UUID, 
-    content: str, 
-    sender_type: str
+    db: AsyncSession,
+    session_id: uuid.UUID,
+    content: str,
+    sender: str
 ) -> ChatMessage:
-    """
-    Saves a new chat message to the database.
-    """
+
     db_message = ChatMessage(
         session_id=session_id,
-        sender=sender_type,
+        sender=sender,
         content=content
     )
+
     db.add(db_message)
+
     await db.commit()
     await db.refresh(db_message)
 

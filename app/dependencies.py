@@ -23,20 +23,27 @@ async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
     db: AsyncSession = Depends(get_db)
 ) -> User:
-
+  
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
+    token = credentials.credentials
+    print("TOKEN:", token)
 
     try:
+        token = credentials.credentials
+        print("TOKEN:", token)
         payload = jwt.decode(
             credentials.credentials,
             settings.SECRET_KEY,
             algorithms=[settings.ALGORITHM]
         )
-
+        print("PAYLOAD:", payload)
+        user_id = payload.get("sub")
+        print("USER_ID:", user_id)    
+    
         user_id = payload.get("sub")
 
         if not user_id:
@@ -44,7 +51,8 @@ async def get_current_user(
 
         user_id = UUID(user_id)
 
-    except (JWTError, ValueError):
+    except (JWTError, ValueError) as e:
+        print("JWT ERROR:", e)
         raise credentials_exception
 
     stmt = (
