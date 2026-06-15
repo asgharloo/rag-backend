@@ -71,4 +71,50 @@ async def get_session_by_id(
 
     return result.scalars().first()
 
+async def delete_session(
+    db: AsyncSession,
+    session_id: UUID,
+    client_id: UUID
+):
+    session = await db.get(ChatSession, session_id)
+
+    if not session:
+        return None
+
+    # security check
+    if session.client_id != client_id:
+        return "forbidden"
+
+    await db.delete(session)
+    await db.commit()
+
+    return session
+
+async def rename_session(
+    db: AsyncSession,
+    session_id: UUID,
+    client_id: UUID,
+    title: str
+):
+    result = await db.execute(
+        select(ChatSession).where(
+            ChatSession.id == session_id
+        )
+    )
+
+    session = result.scalars().first()
+
+    if not session:
+        return None
+
+    if session.client_id != client_id:
+        return "forbidden"
+
+    session.title = title
+
+    await db.commit()
+    await db.refresh(session)
+
+    return session
+
 

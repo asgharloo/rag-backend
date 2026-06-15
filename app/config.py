@@ -13,8 +13,9 @@ else:
 
 class Settings(BaseSettings):
     OPENAI_API_KEY: str
-    #BASE_URL: str
+    BASE_URL: str
     DATABASE_URL: str
+    MODEL_NAME: str
     REDIS_URL: str
     SECRET_KEY: str
     ALGORITHM: str = "HS256"

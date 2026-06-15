@@ -180,7 +180,14 @@ class ChatSession(TimestampMixin, Base):
     summary: Mapped[Optional[str]] = mapped_column(Text)
 
     client: Mapped["ClientProfile"] = relationship(back_populates="chat_sessions")
-    messages: Mapped[List["ChatMessage"]] = relationship(back_populates="session")
+   
+
+    messages: Mapped[List["ChatMessage"]] = relationship(
+    back_populates="session",
+    cascade="all, delete-orphan",
+    passive_deletes=True
+)
+
 
 
 class ChatMessage(TimestampMixin, Base):
@@ -193,8 +200,9 @@ class ChatMessage(TimestampMixin, Base):
     )
 
     session_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("chat_sessions.id", ondelete="CASCADE"),
-        index=True,
+    ForeignKey("chat_sessions.id", ondelete="CASCADE"),
+    index=True,
+    nullable=False
     )
 
     sender: Mapped[MessageSender] = mapped_column(String, nullable=False)
@@ -204,6 +212,8 @@ class ChatMessage(TimestampMixin, Base):
     metadata_col: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSONB)
 
     session: Mapped["ChatSession"] = relationship(back_populates="messages")
+
+    
 
 
 # =========================

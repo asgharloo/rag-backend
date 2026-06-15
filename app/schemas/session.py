@@ -12,6 +12,9 @@ class MessageBase(BaseModel):
     sender: str  # e.g., "user" or "assistant"
     content: str
 
+class SessionUpdate(BaseModel):
+    title: str
+
 class MessageCreate(MessageBase):
     pass
 
