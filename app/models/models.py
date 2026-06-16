@@ -220,6 +220,80 @@ class ChatMessage(TimestampMixin, Base):
 # 🧠 MEMORY (AI CORE)
 # =========================
 
+class MemoryRule(TimestampMixin, Base):
+    __tablename__ = "memory_rules"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        primary_key=True,
+        server_default=text("gen_random_uuid()"),
+    )
+
+    name: Mapped[str] = mapped_column(String(100))  
+    # e.g. "anxiety", "depression"
+
+    memory_type: Mapped[str] = mapped_column(String(50))  
+    # e.g. anxiety, mood, sleep
+
+    priority: Mapped[int] = mapped_column(default=1)
+
+    is_active: Mapped[bool] = mapped_column(default=True)
+
+    keywords: Mapped[Optional[str]] = mapped_column(Text)
+    # comma-separated: "stress,anxiety,tension"
+
+
+class MemoryRuleKeyword(TimestampMixin, Base):
+    __tablename__ = "memory_rule_keywords"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        primary_key=True,
+        server_default=text("gen_random_uuid()"),
+    )
+
+    rule_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("memory_rules.id", ondelete="CASCADE"),
+        index=True,
+    )
+
+    keyword: Mapped[str] = mapped_column(String(100))
+
+    weight: Mapped[float] = mapped_column(default=1.0)
+
+    rule = relationship("MemoryRule")
+
+class RuleMatchLog(TimestampMixin, Base):
+    __tablename__ = "rule_match_logs"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        primary_key=True,
+        server_default=text("gen_random_uuid()"),
+    )
+
+    session_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("chat_sessions.id", ondelete="CASCADE"),
+        index=True,
+    )
+
+    message_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("chat_messages.id", ondelete="CASCADE"),
+        index=True,
+    )
+
+    rule_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("memory_rules.id"),
+        index=True,
+    )
+
+    matched_keyword: Mapped[str] = mapped_column(String(100))
+
+    confidence: Mapped[float] = mapped_column(Float)
+
+    rule = relationship("MemoryRule")
+
+
 class Memory(TimestampMixin, Base):
     __tablename__ = "memories"
 
@@ -244,6 +318,11 @@ class Memory(TimestampMixin, Base):
         "ClientProfile",
         back_populates="memories"
     )
+    
+    rule_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+    ForeignKey("memory_rules.id", ondelete="SET NULL"),
+    index=True
+)
 
     content: Mapped[str] = mapped_column(Text, nullable=False)
 
@@ -265,6 +344,15 @@ class Memory(TimestampMixin, Base):
     decay_score: Mapped[float] = mapped_column(Float, default=1.0)
 
     metadata_col: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSONB)
+
+    source_message_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+    ForeignKey("chat_messages.id", ondelete="SET NULL"),
+    index=True
+    )
+
+    trigger_rule: Mapped[Optional[str]] = mapped_column(String(100))
+
+    confidence: Mapped[float] = mapped_column(Float, default=1.0)
 
 # =========================
 # VECTOR INDEX (pgvector)

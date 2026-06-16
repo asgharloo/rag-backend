@@ -13,6 +13,11 @@ from app.schemas.chat import (
 from app.crud import chat as crud_chat
 from app.services.ai import generate_ai_response
 
+from app.services.rule_engine import (
+    find_matching_rules,
+    choose_best_rule
+)
+
 router = APIRouter(prefix="/chat", tags=["Chat"])
 
 
@@ -31,6 +36,7 @@ async def create_session(
         client_id=current_user.client_profile.id,
         session_in=session_in
     )
+
 
 
 # =========================
