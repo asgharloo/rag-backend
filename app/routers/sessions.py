@@ -6,6 +6,7 @@ from uuid import UUID
 from app.dependencies import get_db, get_current_user
 from app.models.models import User
 from app.crud import session as crud_session
+from app.crud import chat as crud_chat
 from app.schemas.chat import ChatSessionCreate
 from app.schemas.session import SessionResponse, MessageResponse, SessionUpdate
 
@@ -43,7 +44,7 @@ async def get_messages(
 ):
     """Retrieve message history for a specific chat session."""
 
-    session = await crud_session.get_session_by_id(
+    session = await crud_chat.get_session_by_id(
         db,
         session_id
     )
@@ -60,7 +61,7 @@ async def get_messages(
             detail="Access denied"
         )
 
-    return await crud_session.get_session_messages(
+    return await crud_chat.get_session_messages(
         db,
      session_id
     )

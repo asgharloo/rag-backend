@@ -2,5 +2,5 @@
 venv/
 .venv/
 env/
-
+alembic/
 __pycache__/

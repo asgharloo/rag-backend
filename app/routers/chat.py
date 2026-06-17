@@ -1,3 +1,4 @@
+#app.router.chat.py
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
@@ -24,6 +25,7 @@ router = APIRouter(prefix="/chat", tags=["Chat"])
 # =========================
 # CREATE SESSION
 # =========================
+'''
 @router.post("/sessions", response_model=ChatSessionResponse)
 async def create_session(
     session_in: ChatSessionCreate,
@@ -36,7 +38,7 @@ async def create_session(
         client_id=current_user.client_profile.id,
         session_in=session_in
     )
-
+'''
 
 
 # =========================

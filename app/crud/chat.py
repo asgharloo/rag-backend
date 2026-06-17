@@ -5,22 +5,17 @@ from app.schemas.chat import ChatSessionCreate, ChatMessageCreate
 from sqlalchemy.ext.asyncio import AsyncSession
 from uuid import UUID
 
-async def create_chat_session(
+async def get_session_by_id(
     db: AsyncSession,
-    client_id: UUID,
-    session_in: ChatSessionCreate
+    session_id: UUID
 ):
-    db_session = ChatSession(
-        client_id=client_id,
-        title=session_in.title
+    result = await db.execute(
+        select(ChatSession)
+        .where(ChatSession.id == session_id)
     )
 
-    db.add(db_session)
+    return result.scalars().first()
 
-    await db.commit()
-    await db.refresh(db_session)
-
-    return db_session
 
 async def create_chat_message(
     db: AsyncSession,
@@ -53,3 +48,4 @@ async def get_session_messages(
     )
 
     return result.scalars().all()
+

@@ -35,7 +35,7 @@ async def get_user_sessions(db: AsyncSession, client_id: UUID):
     return result.scalars().all()
 
 
-
+'''
 async def get_session_messages(db: AsyncSession, session_id: UUID):
     result = await db.execute(
         select(ChatMessage).where(ChatMessage.session_id == session_id).order_by(ChatMessage.created_at.asc())
@@ -58,18 +58,9 @@ async def add_message(
 
     await db.commit()
     await db.refresh(message)
+'''
 
 
-async def get_session_by_id(
-    db: AsyncSession,
-    session_id: UUID
-):
-    result = await db.execute(
-        select(ChatSession)
-        .where(ChatSession.id == session_id)
-    )
-
-    return result.scalars().first()
 
 async def delete_session(
     db: AsyncSession,
