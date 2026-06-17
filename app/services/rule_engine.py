@@ -21,6 +21,7 @@ async def find_matching_rules(
 
     keywords = result.scalars().all()
 
+    print("value1")
     print("KEYWORDS COUNT:", len(keywords))
 
     matches = []
@@ -33,49 +34,17 @@ async def find_matching_rules(
 
             print("MATCH FOUND:", keyword.keyword)
 
+            print("RULE_ID:", keyword.rule_id)
+
             matches.append(
                 {
-                    "rule": keyword.rule,
+                    "rule_id": str(keyword.rule_id),
                     "keyword": keyword.keyword,
                     "weight": keyword.weight,
                 }
             )
-
     return matches
 
-async def find_matching_rules1(
-    db: AsyncSession,
-    text: str
-):
-    text = text.lower()
-
-    stmt = (
-        select(MemoryRuleKeyword)
-        .join(MemoryRule)
-        .where(MemoryRule.is_active == True)
-    )
-
-    result = await db.execute(stmt)
-
-    keywords = result.scalars().all()
-
-    matches = []
-
-    for keyword in keywords:
-
-        if keyword.keyword.lower() in text:
-
-            matches.append(
-                {
-                    "rule": keyword.rule,
-                    "keyword": keyword.keyword,
-                    "weight": keyword.weight,
-                }
-            )
-
-    
-
-    return matches
 
 def choose_best_rule(matches):
 
@@ -86,12 +55,15 @@ def choose_best_rule(matches):
 
     for item in matches:
 
-        rule_id = item["rule"].id
+        rule_id = item["rule_id"]
 
-        scores.setdefault(rule_id, {
-            "rule": item["rule"],
-            "score": 0
-        })
+        scores.setdefault(
+            rule_id,
+            {
+                "rule_id": rule_id,
+                "score": 0
+            }
+        )
 
         scores[rule_id]["score"] += item["weight"]
 
@@ -99,4 +71,5 @@ def choose_best_rule(matches):
         scores.values(),
         key=lambda x: x["score"]
     )
+    
 
