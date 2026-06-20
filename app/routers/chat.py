@@ -23,25 +23,6 @@ router = APIRouter(prefix="/chat", tags=["Chat"])
 
 
 # =========================
-# CREATE SESSION
-# =========================
-'''
-@router.post("/sessions", response_model=ChatSessionResponse)
-async def create_session(
-    session_in: ChatSessionCreate,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-
-    return await crud_chat.create_chat_session(
-        db=db,
-        client_id=current_user.client_profile.id,
-        session_in=session_in
-    )
-'''
-
-
-# =========================
 # SEND MESSAGE + AI RESPONSE
 # =========================
 @router.post(
@@ -68,6 +49,15 @@ async def send_message(
         db=db,
         session_id=session_id
     )
+      
+    matches = await find_matching_rules(
+    db=db,
+    text=message_in.content
+    )
+
+    print("MATCHES =", matches)
+    winner = choose_best_rule(matches)
+    print("WINNER =", winner)  
 
     # 3. Build chat history for AI
     chat_history = [
@@ -80,7 +70,7 @@ async def send_message(
 
     # 4. AI response
     ai_response_text = await generate_ai_response(chat_history)
-
+    
     # 5. Save AI message
     ai_message = await crud_chat.create_chat_message(
         db=db,

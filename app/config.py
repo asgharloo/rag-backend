@@ -6,8 +6,9 @@ from pathlib import Path
 env_path = ".env"
 if os.path.exists(env_path):
     with open(env_path, "r") as f:
-        print("DEBUG: .env content:")
-        print(f.read())
+        #print("DEBUG: .env content:")
+        print("PASSED .env. Found enviromnet key")
+        #print(f.read())
 else:
     print("DEBUG: .env NOT FOUND at /app/.env")
 
