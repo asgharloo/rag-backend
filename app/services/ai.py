@@ -1,31 +1,15 @@
-import os
-from openai import OpenAI
+from openai import AsyncOpenAI
 from app.config import settings
+
+client = AsyncOpenAI(
+    api_key=settings.OPENAI_API_KEY,
+    base_url=settings.BASE_URL
+)
 
 
 async def generate_ai_response(messages: list[dict]) -> str:
 
-
-
-    """
-    messages format:
-    [
-        {"role": "user", "content": "..."},
-        {"role": "assistant", "content": "..."}
-    ]
-    
-
-    response = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=messages
-    )
-    """
-    client = OpenAI(
-      api_key=settings.OPENAI_API_KEY,
-      base_url=settings.BASE_URL
-    )
-    
-    response = client.chat.completions.create(
+    response = await client.chat.completions.create(
         model=settings.MODEL_NAME,
         messages=messages,
         temperature=0.7,
@@ -33,4 +17,21 @@ async def generate_ai_response(messages: list[dict]) -> str:
 
     return response.choices[0].message.content
 
-    
+
+
+async def generate_embedding(text: str) -> list[float] | None:
+
+    try:
+
+        response = await client.embeddings.create(
+            input=text,
+            model="text-embedding-3-small"
+        )
+
+        return response.data[0].embedding
+
+    except Exception as e:
+
+        print(f"Error generating embedding: {e}")
+
+        return None

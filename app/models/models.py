@@ -326,7 +326,7 @@ class Memory(TimestampMixin, Base):
 
     content: Mapped[str] = mapped_column(Text, nullable=False)
 
-    embedding: Mapped[list[float]] = mapped_column(Vector(1536))
+    embedding: Mapped[Optional[list[float]]] = mapped_column(Vector(1536))
 
     # 🧠 NEW: emotional intelligence
     emotion: Mapped[Optional[str]] = mapped_column(String(50))  
