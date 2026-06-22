@@ -1,5 +1,5 @@
 #app.router.chat.py
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
 from app.dependencies import get_current_user
@@ -18,6 +18,8 @@ from app.services.rule_engine import (
     find_matching_rules,
     choose_best_rule
 )
+from datetime import datetime, timezone
+import json
 
 router = APIRouter(prefix="/chat", tags=["Chat"])
 
@@ -37,26 +39,57 @@ async def send_message(
     current_user: User = Depends(get_current_user),
 ):
 
-
     # ==================================
     # 1. Save User Message
     # ==================================
+
+    #### if message duplicated , should not inserted and return error to client.
+    ### future should be implemeted with redis 
+    
+    last_message = await crud_chat.get_last_user_message(
+        db=db,
+        session_id=session_id
+    )
+
+    if last_message:
+        is_same_content = (
+            last_message.content.strip()
+            == message_in.content.strip()
+        )
+
+        seconds = (
+            datetime.now(timezone.utc)
+            - last_message.created_at
+        ).total_seconds()
+
+        if is_same_content and seconds < 300:
+            raise HTTPException(
+                status_code=400,
+                detail="Duplicate message"
+            )
+            
     user_message = await crud_chat.create_chat_message(
         db=db,
         session_id=session_id,
         content=message_in.content,
         sender=MessageSender.CLIENT.value
     )
+    
 
     # ==================================
     # 2. Rule Engine
     # ==================================
+
+    # send the request to services/rule_engine.py:
+    # find_matching_rules is inside the rule_engin,py
     matches = await find_matching_rules(
         db=db,
         text=message_in.content
     )
 
     print("MATCHES =", matches)
+    
+    ## choose_best_rule.py is inside the rule_engin.py 
 
     winner = choose_best_rule(matches)
 
@@ -69,7 +102,7 @@ async def send_message(
         embedding = await generate_embedding(
             message_in.content
         )
-        print("embeding:", embedding)
+        # print("embeding:", embedding)
         if embedding:
             await crud_memory.create_memory(
                 db=db,
@@ -90,17 +123,26 @@ async def send_message(
         db=db,
         session_id=session_id
     )
-
     # ==================================
     # 5. Retrieve Memories
     # ==================================
-    related_memories = await crud_memory.get_memories_by_client(
-        db=db,
-        client_id=current_user.client_profile.id,
-        limit=5
+    query_embedding = await generate_embedding(
+      message_in.content
     )
 
+    related_memories = []
+
+    if query_embedding:
+        related_memories = await crud_memory.search_memories(
+        db=db,
+        client_id=current_user.client_profile.id,
+        query_embedding=query_embedding,
+        limit=3
+        )
+        
+
     print("MEMORIES FOUND:", len(related_memories))
+    print ("RELATED memories:", related_memories)
 
     memory_context = "\n".join(
         [
@@ -108,7 +150,8 @@ async def send_message(
             for m in related_memories
         ]
     )
-
+    
+    print ("memory context:", memory_context) 
     # ==================================
     # 6. Build Chat History
     # ==================================
@@ -123,12 +166,13 @@ async def send_message(
         }
         for msg in session_messages
     ]
+     
+    #print ("chat_history:",chat_history)
 
     # ==================================
     # 7. Inject Memories Into Prompt
     # ==================================
     if memory_context:
-
         chat_history.insert(
             0,
             {
@@ -140,6 +184,29 @@ async def send_message(
                 )
             }
         )
+    print(
+        "TOTAL MESSAGES:",
+        len(chat_history)
+    )
+    total_chars = sum(
+        len(m["content"])
+        for m in chat_history
+    )
+
+    print(
+        "TOTAL CHARS:",
+        total_chars
+    )
+
+    print(
+      json.dumps(
+            chat_history,
+            ensure_ascii=False,
+            indent=2
+      )
+    )
+    
+
 
     # ==================================
     # 8. Generate AI Response
@@ -148,8 +215,8 @@ async def send_message(
         chat_history
     )
     print("AI RESPONSE:", ai_response_text)
-
-
+  
+    
     # ==================================
     # 9. Save AI Message
     # ==================================

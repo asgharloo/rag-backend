@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session 
 from sqlalchemy import select
-from app.models.models import ChatSession, ChatMessage
+from app.models.models import ChatSession, ChatMessage, MessageSender
 from app.schemas.chat import ChatSessionCreate, ChatMessageCreate
 from sqlalchemy.ext.asyncio import AsyncSession
 from uuid import UUID
@@ -49,3 +49,22 @@ async def get_session_messages(
 
     return result.scalars().all()
 
+async def get_last_user_message(
+    db,
+    session_id
+):
+    stmt = (
+        select(ChatMessage)
+        .where(
+            ChatMessage.session_id == session_id,
+            ChatMessage.sender == MessageSender.CLIENT.value
+        )
+        .order_by(
+            ChatMessage.created_at.desc()
+        )
+        .limit(1)
+    )
+
+    result = await db.execute(stmt)
+
+    return result.scalar_one_or_none()

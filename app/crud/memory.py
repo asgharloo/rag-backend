@@ -3,6 +3,29 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.models import Memory
 
+async def search_memories(
+    db,
+    client_id,
+    query_embedding,
+    limit=5
+):
+    stmt = (
+        select(Memory)
+        .where(
+            Memory.client_id == client_id
+        )
+        .order_by(
+            Memory.embedding.cosine_distance(
+                query_embedding
+            )
+        )
+        .limit(limit)
+    )
+    print("ssssstmt:",stmt)
+    result = await db.execute(stmt)
+
+    return result.scalars().all()
+
 async def get_memories_by_client(
     db,
     client_id,
@@ -53,18 +76,3 @@ async def create_memory(
 
     return memory
 
-async def get_memories_by_client(
-    db: AsyncSession,
-    client_id: UUID,
-    limit: int = 5
-):
-    stmt = (
-        select(Memory)
-        .where(Memory.client_id == client_id)
-        .order_by(Memory.importance_score.desc())
-        .limit(limit)
-    )
-
-    result = await db.execute(stmt)
-
-    return result.scalars().all()
