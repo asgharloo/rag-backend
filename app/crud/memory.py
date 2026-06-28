@@ -9,22 +9,25 @@ async def search_memories(
     query_embedding,
     limit=5
 ):
+    distance = Memory.embedding.cosine_distance(
+        query_embedding
+    ).label("distance")
+
     stmt = (
-        select(Memory)
+        select(
+            Memory,
+            distance
+        )
         .where(
             Memory.client_id == client_id
         )
-        .order_by(
-            Memory.embedding.cosine_distance(
-                query_embedding
-            )
-        )
+        .order_by(distance)
         .limit(limit)
     )
-    print("ssssstmt:",stmt)
+
     result = await db.execute(stmt)
 
-    return result.scalars().all()
+    return result.all()
 
 async def get_memories_by_client(
     db,

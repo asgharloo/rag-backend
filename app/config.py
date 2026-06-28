@@ -20,6 +20,11 @@ class Settings(BaseSettings):
     REDIS_URL: str
     SECRET_KEY: str
     ALGORITHM: str = "HS256"
+    SUMMARY_INTERVAL: int
+    SUMMARY_MAX_WORDS: int 
+    MEMORY_SEARCH_LIMIT: int
+    MEMORY_DISTANCE_THRESHOLD: float
+    CHAT_HISTORY_LIMIT: int
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440
     DEBUG: bool = False
     model_config = SettingsConfigDict(

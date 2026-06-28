@@ -11,6 +11,8 @@ from sqlalchemy import (
     String,
     Text,
     TIMESTAMP,
+    Integer,
+    DateTime,
     text,
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID
@@ -177,11 +179,22 @@ class ChatSession(TimestampMixin, Base):
         default=SessionStatus.ACTIVE.value,
     )
 
-    summary: Mapped[Optional[str]] = mapped_column(Text)
+    session_summary: Mapped[dict | None] = mapped_column(
+    JSONB,
+    nullable=True
+    )
+
+    summary_version: Mapped[int] = mapped_column(
+    Integer,
+    default=1
+    )
+
+    summary_updated_at: Mapped[datetime | None] = mapped_column(
+    DateTime(timezone=True),
+    nullable=True
+    )
 
     client: Mapped["ClientProfile"] = relationship(back_populates="chat_sessions")
-   
-
     messages: Mapped[List["ChatMessage"]] = relationship(
     back_populates="session",
     cascade="all, delete-orphan",

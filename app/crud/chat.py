@@ -1,9 +1,12 @@
+#crud_chat.py
 from sqlalchemy.orm import Session 
-from sqlalchemy import select
+from datetime import datetime, timezone
+from sqlalchemy import select, update
 from app.models.models import ChatSession, ChatMessage, MessageSender
 from app.schemas.chat import ChatSessionCreate, ChatMessageCreate
 from sqlalchemy.ext.asyncio import AsyncSession
 from uuid import UUID
+from app.config import settings
 
 async def get_session_by_id(
     db: AsyncSession,
@@ -68,3 +71,22 @@ async def get_last_user_message(
     result = await db.execute(stmt)
 
     return result.scalar_one_or_none()
+
+async def update_session_summary(
+    db,
+    session_id,
+    session_summary,
+    summary_version
+):
+    stmt = (
+        update(ChatSession)
+        .where(ChatSession.id == session_id)
+        .values(
+            session_summary=session_summary,
+            summary_version=summary_version,
+            summary_updated_at=datetime.now(timezone.utc)
+        )
+    )
+
+    await db.execute(stmt)
+    await db.commit()

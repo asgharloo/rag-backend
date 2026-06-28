@@ -18,15 +18,12 @@ from app.services.rule_engine import (
     find_matching_rules,
     choose_best_rule
 )
+from app.config import settings
+from app.services.summary import generate_session_summary
 from datetime import datetime, timezone
 import json
 
 router = APIRouter(prefix="/chat", tags=["Chat"])
-
-
-# =========================
-# SEND MESSAGE + AI RESPONSE
-# =========================
 
 @router.post(
     "/sessions/{session_id}/messages",
@@ -38,20 +35,19 @@ async def send_message(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    summary = None
 
     # ==================================
-    # 1. Save User Message
+    # 1. Check Duplicate Message
     # ==================================
 
-    #### if message duplicated , should not inserted and return error to client.
-    ### future should be implemeted with redis 
-    
     last_message = await crud_chat.get_last_user_message(
         db=db,
         session_id=session_id
     )
 
     if last_message:
+
         is_same_content = (
             last_message.content.strip()
             == message_in.content.strip()
@@ -62,164 +58,189 @@ async def send_message(
             - last_message.created_at
         ).total_seconds()
 
-        if is_same_content and seconds < 300:
+        if (
+            is_same_content
+            and
+            seconds < 300
+        ):
             raise HTTPException(
                 status_code=400,
                 detail="Duplicate message"
             )
-            
+    # ==================================
+    # 2. Save User Message
+    # ==================================
+
     user_message = await crud_chat.create_chat_message(
         db=db,
         session_id=session_id,
         content=message_in.content,
         sender=MessageSender.CLIENT.value
     )
-    
 
     # ==================================
-    # 2. Rule Engine
+    # 3. Generate Embedding
     # ==================================
 
-    # send the request to services/rule_engine.py:
-    # find_matching_rules is inside the rule_engin,py
+    query_embedding = await generate_embedding(
+        message_in.content
+    )
+
+    # ==================================
+    # 4. Rule Engine
+    # ==================================
+
     matches = await find_matching_rules(
         db=db,
         text=message_in.content
     )
 
-    print("MATCHES =", matches)
-    
-    ## choose_best_rule.py is inside the rule_engin.py 
-
     winner = choose_best_rule(matches)
 
-    print("WINNER =", winner)
+    print("MATCHES:", matches)
+    print("WINNER:", winner)
 
     # ==================================
-    # 3. Create Memory
+    # 5. Create Memory
     # ==================================
-    if winner:
-        embedding = await generate_embedding(
-            message_in.content
+
+    if winner and query_embedding:
+
+        await crud_memory.create_memory(
+            db=db,
+            client_id=current_user.client_profile.id,
+            session_id=session_id,
+            content=message_in.content,
+            memory_type="rule_match",
+            importance_score=winner["score"],
+            embedding=query_embedding
         )
-        # print("embeding:", embedding)
-        if embedding:
-            await crud_memory.create_memory(
-                db=db,
-                client_id=current_user.client_profile.id,
-                session_id=session_id,
-                content=message_in.content,
-                memory_type="rule_match",
-                importance_score=winner["score"],
-                embedding=embedding
-            )
-            print("MEMORY CREATED")
-    
+
+        print("MEMORY CREATED")
 
     # ==================================
-    # 4. Get Session History
+    # 6. Load Session Messages
     # ==================================
+
     session_messages = await crud_chat.get_session_messages(
         db=db,
         session_id=session_id
     )
+
     # ==================================
-    # 5. Retrieve Memories
+    # 7. Retrieve Related Memories
     # ==================================
-    query_embedding = await generate_embedding(
-      message_in.content
-    )
 
     related_memories = []
 
     if query_embedding:
-        related_memories = await crud_memory.search_memories(
-        db=db,
-        client_id=current_user.client_profile.id,
-        query_embedding=query_embedding,
-        limit=3
-        )
-        
 
-    print("MEMORIES FOUND:", len(related_memories))
-    print ("RELATED memories:", related_memories)
+        related_memories = await crud_memory.search_memories(
+            db=db,
+            client_id=current_user.client_profile.id,
+            query_embedding=query_embedding,
+            limit=settings.MEMORY_SEARCH_LIMIT
+        )
+    # ==================================
+    # 8. Filter Memories
+    # ==================================
+
+    filtered_memories = []
+
+    for memory, distance in related_memories:
+
+        print(memory.content)
+        print(distance)
+
+        if (
+            distance
+            <
+            settings.MEMORY_DISTANCE_THRESHOLD
+        ):
+            filtered_memories.append(memory)
+
+    print("MEMORIES FOUND:", len(filtered_memories))
+
+    # ==================================
+    # 9. Build Memory Context
+    # ==================================
 
     memory_context = "\n".join(
         [
             f"- {m.memory_type}: {m.content}"
-            for m in related_memories
+            for m in filtered_memories
         ]
     )
-    
-    print ("memory context:", memory_context) 
-    # ==================================
-    # 6. Build Chat History
-    # ==================================
-    chat_history = [
-        {
-            "role": (
-                "user"
-                if msg.sender == MessageSender.CLIENT.value
-                else "assistant"
-            ),
-            "content": msg.content
-        }
-        for msg in session_messages
-    ]
-     
-    #print ("chat_history:",chat_history)
 
     # ==================================
-    # 7. Inject Memories Into Prompt
+    # 10. Build Chat History
     # ==================================
+
+    chat_history = [
+
+        {
+            "role":
+                (
+                    "user"
+                    if msg.sender == MessageSender.CLIENT.value
+                    else "assistant"
+                ),
+
+            "content": msg.content
+        }
+
+        for msg in session_messages
+
+    ]
+
+    # ==================================
+    # 11. Inject Memories
+    # ==================================
+
     if memory_context:
+
         chat_history.insert(
+
             0,
+
             {
                 "role": "system",
-                "content": (
+
+                "content":
+
+                (
                     "Relevant user memories:\n\n"
+
                     f"{memory_context}\n\n"
+
                     "Use these memories when answering."
                 )
             }
         )
-    print(
-        "TOTAL MESSAGES:",
-        len(chat_history)
-    )
-    total_chars = sum(
-        len(m["content"])
-        for m in chat_history
-    )
 
     print(
-        "TOTAL CHARS:",
-        total_chars
-    )
-
-    print(
-      json.dumps(
+        json.dumps(
             chat_history,
             ensure_ascii=False,
             indent=2
-      )
+        )
     )
-    
 
+        # ==================================
+    # Generate AI Response
+    # ==================================
 
-    # ==================================
-    # 8. Generate AI Response
-    # ==================================
     ai_response_text = await generate_ai_response(
         chat_history
     )
     print("AI RESPONSE:", ai_response_text)
-  
-    
+
     # ==================================
-    # 9. Save AI Message
+    # 13. Save AI Message
     # ==================================
+
+
+
     ai_message = await crud_chat.create_chat_message(
         db=db,
         session_id=session_id,
@@ -228,7 +249,53 @@ async def send_message(
     )
 
     # ==================================
-    # 10. Return AI Message
+    # 14. Reload Session Messages
     # ==================================
-    return ai_message
-   
+
+    session_messages = await crud_chat.get_session_messages(
+        db=db,
+        session_id=session_id
+    )
+
+    # ==================================
+    # 15. Check Summary Interval
+    # ==================================
+
+    if (
+        len(session_messages)
+        %
+        settings.SUMMARY_INTERVAL
+        ==
+        0
+    ):
+
+        summary_messages = [
+
+            {
+                "role":
+                    (
+                        "user"
+                        if msg.sender == MessageSender.CLIENT.value
+                        else "assistant"
+                    ),
+
+                "content": msg.content
+            }
+
+            for msg in session_messages
+
+        ]
+
+        summary = await generate_session_summary(
+            summary_messages
+        )
+  
+    if summary:
+        print(summary)
+
+    await crud_chat.update_session_summary(
+        db=db,
+        session_id=session_id,
+        session_summary=summary,
+        summary_version=1
+    )
