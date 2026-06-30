@@ -10,29 +10,30 @@ client = AsyncOpenAI(
 )
 
 
-async def generate_ai_response(messages: list[dict]) -> str:
-   
+async def generate_ai_response(messages):
+
     for attempt in range(3):
 
         try:
-
+            print(">>> BEFORE OPENAI")
             response = await client.chat.completions.create(
                 model=settings.MODEL_NAME,
                 messages=messages,
                 temperature=0.7,
             )
+            print(">>> AFTER OPENAI")
+            print(response)
 
             return response.choices[0].message.content
 
         except Exception as e:
-                #print(type(e))
-                #print(repr(e))
-                #print(f"AI Error ({attempt+1}/3): {e}")
-                print(f"AI Error ({attempt+1}/3):")
-                if attempt < 2:
-                    await asyncio.sleep(3)
-                else:
-                    raise
+
+            print(f"Attempt {attempt+1}: {e}")
+
+            if attempt < 2:
+                await asyncio.sleep(3)
+            else:
+                raise RuntimeError("AI request failed after 3 attempts")
 
 async def generate_embedding(text: str) -> list[float] | None:
 

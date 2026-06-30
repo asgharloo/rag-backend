@@ -282,7 +282,7 @@ async def send_message(
             for msg in session_messages
         ]
 
-        summary = await generate_session_summary(summary_messages)
+        summary = await generate_session_summary(summary_messages, user_messages=summary_messages, )
 
     if summary:
 
