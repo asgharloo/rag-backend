@@ -52,6 +52,19 @@ async def get_session_messages(
 
     return result.scalars().all()
 
+async def get_chat_session(
+    db,
+    session_id,
+):
+    stmt = (
+        select(ChatSession)
+        .where(ChatSession.id == session_id)
+    )
+
+    result = await db.execute(stmt)
+
+    return result.scalar_one_or_none()
+
 async def get_last_user_message(
     db,
     session_id
@@ -72,11 +85,53 @@ async def get_last_user_message(
 
     return result.scalar_one_or_none()
 
+async def get_messages_after(
+    db: AsyncSession,
+    session_id: UUID,
+    last_message_id: UUID | None,
+):
+    """
+    Return only messages created after the last summarized message.
+    If last_message_id is None, return all session messages.
+    """
+
+    stmt = (
+        select(ChatMessage)
+        .where(ChatMessage.session_id == session_id)
+        .order_by(ChatMessage.created_at.asc())
+    )
+
+    result = await db.execute(stmt)
+    messages = result.scalars().all()
+
+    if last_message_id is None:
+        return messages
+
+    start_index = None
+
+    for index, message in enumerate(messages):
+
+        if message.id == last_message_id:
+            start_index = index + 1
+            break
+
+    if start_index is None:
+        # اگر پیام پیدا نشد (مثلاً حذف شده بود)
+        # برای جلوگیری از خراب شدن Summary،
+        # همه پیام‌ها را برگردان.
+        return messages
+
+    return messages[start_index:]
+
+
 async def update_session_summary(
     db,
     session_id,
     session_summary,
-    summary_version
+    summary_version,
+    summary_last_message_id,
+    summary_message_count,
+    summary_token_count,
 ):
     stmt = (
         update(ChatSession)
@@ -84,7 +139,10 @@ async def update_session_summary(
         .values(
             session_summary=session_summary,
             summary_version=summary_version,
-            summary_updated_at=datetime.now(timezone.utc)
+            summary_updated_at=datetime.now(timezone.utc),
+            summary_last_message_id=summary_last_message_id,
+            summary_message_count=summary_message_count,
+            summary_token_count=summary_token_count,
         )
     )
 

@@ -251,25 +251,34 @@ async def send_message(
     # ==================================
     # 14. Reload Session Messages
     # ==================================
-
-    session_messages = await crud_chat.get_session_messages(
+   
+    chat_session = await crud_chat.get_chat_session(
         db=db,
-        session_id=session_id
+        session_id=session_id,
+    )   
+
+    if chat_session is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Session not found",
     )
+
+    new_messages = await crud_chat.get_messages_after(
+        db=db,
+        session_id=session_id,
+        last_message_id=chat_session.summary_last_message_id,
+        )
+    # ==================================
+    # Load Chat Session
+    # ==================================
+
 
     # ==================================
     # 15. Check Summary Interval
     # ==================================
 
 
-    if (
-        len(session_messages)
-        %
-        settings.SUMMARY_INTERVAL
-        ==
-        0
-    ):
-
+    if len(new_messages) >= settings.SUMMARY_INTERVAL:
         summary_messages = [
             {
                 "role": (
@@ -279,20 +288,24 @@ async def send_message(
                 ),
                 "content": msg.content,
             }
-            for msg in session_messages
+            for msg in new_messages
         ]
-
-        summary = await generate_session_summary(summary_messages, user_messages=summary_messages, )
+        
+        summary = await generate_session_summary(
+            previous_summary=chat_session.session_summary,
+            user_messages=summary_messages,
+        )
 
     if summary:
-
         print(summary)
-
         await crud_chat.update_session_summary(
             db=db,
             session_id=session_id,
             session_summary=summary,
-            summary_version=1,
+            summary_version=chat_session.summary_version + 1,
+            summary_last_message_id=session_messages[-1].id,
+            summary_message_count=len(session_messages),
+            summary_token_count=0,   # فعلاً بعداً محاسبه می‌کنیم
         )
 
     return ai_message

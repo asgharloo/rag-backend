@@ -29,16 +29,15 @@ Rules:
 - Maximum {settings.SUMMARY_MAX_WORDS} words.
 """
 
-
 async def generate_session_summary(
     previous_summary: str | None,
-    user_messages: list
+    user_messages: list,
 ):
 
     messages = [
         {
             "role": "system",
-            "content": SYSTEM_PROMPT
+            "content": SYSTEM_PROMPT,
         }
     ]
 
@@ -46,22 +45,19 @@ async def generate_session_summary(
         messages.append(
             {
                 "role": "system",
-                "content": (
-                    "Previous session summary:\n\n"
-                    f"{previous_summary}"
-                )
+                "content": f"""
+Current session summary:
+
+{previous_summary}
+
+Update this summary using the new conversation below.
+
+Do NOT rewrite the summary from scratch.
+Preserve all previously important facts unless they are corrected.
+Return the updated summary in Persian only.
+""",
             }
         )
-
-    messages.append(
-        {
-            "role": "system",
-            "content": (
-                "Below are the new user messages "
-                "from this session."
-            )
-        }
-    )
 
     messages.extend(user_messages)
 
