@@ -3,6 +3,8 @@ from typing import Optional, List, Dict, Any
 import uuid
 import enum
 
+from typing import Any
+
 from sqlalchemy import (
     Boolean,
     Float,
@@ -179,19 +181,36 @@ class ChatSession(TimestampMixin, Base):
         default=SessionStatus.ACTIVE.value,
     )
 
-    session_summary: Mapped[dict | None] = mapped_column(
-    JSONB,
-    nullable=True
+    session_summary: Mapped[dict[str, Any] | None] = mapped_column(
+      JSONB,
+      nullable=True,
     )
+
 
     summary_version: Mapped[int] = mapped_column(
     Integer,
-    default=1
+    default=1,
+    server_default="1")
+    
+    summary_token_count: Mapped[int] = mapped_column(
+    Integer,
+    default=0,
+    server_default="0",
     )
 
     summary_updated_at: Mapped[datetime | None] = mapped_column(
     DateTime(timezone=True),
     nullable=True
+    )
+
+    summary_last_message_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        nullable=True,
+    )
+
+    summary_message_count: Mapped[int] = mapped_column(
+    Integer,
+    default=0
     )
 
     client: Mapped["ClientProfile"] = relationship(back_populates="chat_sessions")

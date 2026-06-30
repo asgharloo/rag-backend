@@ -261,6 +261,7 @@ async def send_message(
     # 15. Check Summary Interval
     # ==================================
 
+
     if (
         len(session_messages)
         %
@@ -270,32 +271,28 @@ async def send_message(
     ):
 
         summary_messages = [
-
             {
-                "role":
-                    (
-                        "user"
-                        if msg.sender == MessageSender.CLIENT.value
-                        else "assistant"
-                    ),
-
-                "content": msg.content
+                "role": (
+                    "user"
+                    if msg.sender == MessageSender.CLIENT.value
+                    else "assistant"
+                ),
+                "content": msg.content,
             }
-
             for msg in session_messages
-
         ]
 
-        summary = await generate_session_summary(
-            summary_messages
-        )
-  
+        summary = await generate_session_summary(summary_messages)
+
     if summary:
+
         print(summary)
 
-    await crud_chat.update_session_summary(
-        db=db,
-        session_id=session_id,
-        session_summary=summary,
-        summary_version=1
-    )
+        await crud_chat.update_session_summary(
+            db=db,
+            session_id=session_id,
+            session_summary=summary,
+            summary_version=1,
+        )
+
+    return ai_message
