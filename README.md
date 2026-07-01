@@ -16,20 +16,20 @@ The project is designed with scalability and maintainability in mind and serves 
 
 ---
 
+
 ## Features
 
-- User authentication with OTP and JWT
-- User profile management
-- Chat session management
-- AI-powered conversation engine
-- Long-term memory storage
-- Semantic memory retrieval using vector embeddings (pgvector)
-- Rule-based response engine
-- Automatic session summarization
-- Psychological assessment support
-- PostgreSQL database
-- Database versioning with Alembic
-- Dockerized deployment
+- Secure authentication (OTP & JWT)
+- Conversation and session management
+- AI-powered response generation
+- Long-term memory
+- Semantic retrieval using pgvector
+- Context-aware response generation
+- Rule-based workflow engine
+- Conversation summarization
+- Extensible architecture for domain-specific assistants
+- PostgreSQL + Alembic
+- Docker support
 
 ---
 
