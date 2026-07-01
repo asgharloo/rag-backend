@@ -8,12 +8,9 @@ A modular AI backend for building intelligent assistants with long-term memory, 
 
 ## Overview
 
-Rug AI Backend is a FastAPI-based backend designed for AI-powered mental health conversations.
+Rug AI Backend is a FastAPI-based backend for building AI-powered assistants.
 
-The system provides secure user authentication, persistent chat sessions, long-term memory, semantic retrieval using vector embeddings, AI-generated responses, and psychological assessment support.
-
-The project is designed with scalability and maintainability in mind and serves as the backend foundation for an intelligent mental health platform.
-
+The platform provides secure authentication, persistent conversations, long-term memory, semantic retrieval using vector embeddings, AI-generated responses, and an extensible architecture that can be adapted to different domains such as healthcare, education, customer support, coaching, or personal assistants.
 ---
 
 
