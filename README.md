@@ -8,7 +8,7 @@ A modular AI backend for building intelligent assistants with long-term memory, 
 
 ## Overview
 
-Rug AI Backend is a FastAPI-based backend for building AI-powered assistants.
+Rag AI Backend is a FastAPI-based backend for building AI-powered assistants.
 
 The platform provides secure authentication, persistent conversations, long-term memory, semantic retrieval using vector embeddings, AI-generated responses, and an extensible architecture that can be adapted to different domains such as healthcare, education, customer support, coaching, or personal assistants.
 ---
