@@ -1,4 +1,4 @@
-# Rug AI Backend
+# Rag AI Backend
 
 > 🚧 **Work in Progress**
 
